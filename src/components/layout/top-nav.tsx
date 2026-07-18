@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Home, Compass, Bell, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -9,8 +10,8 @@ export function TopNav() {
     <header className="hidden md:flex w-full h-16 border-b border-border sticky top-0 bg-background/95 backdrop-blur-xl z-50 items-center justify-between px-6">
       <div className="flex items-center gap-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-primary-foreground font-bold text-lg leading-none">R</span>
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-lg shadow-primary/20">
+            <Image src="/logo.png" alt="Resonance Logo" width={32} height={32} className="object-cover" />
           </div>
           <span className="text-xl font-semibold tracking-tight hidden lg:inline-block">Resonance</span>
         </Link>

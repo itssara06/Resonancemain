@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLogin) {
+      document.cookie = "auth=true; path=/; max-age=86400"; // Set mock auth cookie
       router.push("/");
     } else {
       router.push("/onboarding");
@@ -24,8 +26,8 @@ export default function LoginPage() {
     <div className="flex-1 flex flex-col items-center justify-center min-h-screen px-4 pb-20 md:pb-0 relative overflow-hidden bg-background">
       <div className="w-full max-w-sm sm:max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8 sm:mb-10 text-center">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-primary/20">
-            <span className="text-primary-foreground font-bold text-xl sm:text-2xl leading-none">R</span>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-primary/20">
+            <Image src="/logo.png" alt="Resonance Logo" width={48} height={48} className="object-cover" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-white">
             {isLogin ? "Welcome back" : "Join Resonance"}

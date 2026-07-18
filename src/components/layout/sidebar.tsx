@@ -1,12 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Home, Compass, PlusSquare, Bell, User } from "lucide-react";
 
 export function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col w-64 border-r border-border h-screen sticky top-0 bg-background/95 backdrop-blur z-40 p-4">
       <div className="flex items-center gap-2 mb-8 px-2">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg leading-none">R</span>
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+          <Image src="/logo.png" alt="Resonance Logo" width={32} height={32} className="object-cover" />
         </div>
         <span className="text-xl font-semibold tracking-tight">Resonance</span>
       </div>
