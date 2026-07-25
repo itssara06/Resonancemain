@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://app.resonance.org.in/api' : 'http://localhost:5000/api');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://resoanance-neondb.onrender.com/api' : 'http://localhost:5000/api');
 
 export const api = axios.create({
   baseURL: API_URL,
