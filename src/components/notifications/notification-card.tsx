@@ -5,6 +5,8 @@ import { MessageSquare, Heart, FileText, UserPlus, Star, Bookmark, Pin, MoreHori
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
 
 export type NotificationType = "reaction" | "reply" | "article_comment" | "mention" | "follow" | "helpful" | "pinned" | "bookmark" | "grouped_reaction" | "grouped_reply";
 
@@ -21,6 +23,12 @@ export interface NotificationProps {
 export function NotificationCard({ notification, onRead }: { notification: NotificationProps, onRead: (id: string) => void }) {
   const [isRead, setIsRead] = useState(!notification.isUnread);
   const [isHovered, setIsHovered] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const router = useRouter();
+  const requireAuth = (callback: () => void) => {
+    if (isAuthenticated) callback();
+    else router.push('/login');
+  };
 
   const markRead = () => {
     setIsRead(true);
@@ -127,7 +135,7 @@ export function NotificationCard({ notification, onRead }: { notification: Notif
         {/* Action Button & Time */}
         <div className="mt-3 flex items-center gap-4">
           {notification.type === "follow" ? (
-            <Button size="sm" className="h-7 px-4 rounded-full text-xs">Follow Back</Button>
+            <Button onClick={(e) => { e.stopPropagation(); requireAuth(() => {}); }} size="sm" className="h-7 px-4 rounded-full text-xs">Follow Back</Button>
           ) : (
             <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
               View Conversation <ArrowRight size={12} />

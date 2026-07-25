@@ -81,13 +81,41 @@ export default function OnboardingFlow() {
   const prevStep = () => { setDirection(-1); setStep((s) => Math.max(s - 1, 1)); };
   const skipStep = () => nextStep();
 
-  // Step 8 Redirect Simulation
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Step 8 Submission & Redirect
   useEffect(() => {
-    if (step === 8) {
-      const timer = setTimeout(() => router.push("/"), 3000);
-      return () => clearTimeout(timer);
+    if (step === 8 && !isSubmitting) {
+      setIsSubmitting(true);
+      
+      const submitOnboarding = async () => {
+        try {
+          const { onboardUser } = await import('@/api/users');
+          const { useAuthStore } = await import('@/store/useAuthStore');
+          
+          await onboardUser({
+            name: profile.name,
+            username: profile.username,
+            bio: profile.bio,
+            website: profile.website,
+            image: profile.image,
+            interests,
+            disciplines,
+          });
+          
+          // Re-fetch user to update isOnboarded flag in the store
+          await useAuthStore.getState().fetchCurrentUser();
+          
+          setTimeout(() => { window.location.href = "/"; }, 2000);
+        } catch (err) {
+          console.error("Onboarding failed", err);
+          setTimeout(() => { window.location.href = "/"; }, 2000); // Fallback redirect
+        }
+      };
+      
+      submitOnboarding();
     }
-  }, [step, router]);
+  }, [step, router, profile, interests, disciplines, isSubmitting]);
 
   const renderStep = () => {
     switch (step) {
@@ -386,7 +414,23 @@ function Step5Avatar({ profile, setProfile, onNext, onSkip }: any) {
   );
 }
 
+import { useUsernameValidation } from "@/hooks/useUsernameValidation";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+
 function Step6Profile({ profile, setProfile, onNext }: any) {
+  const { username, setUsername, isValidating, isAvailable, suggestions } = useUsernameValidation(profile.username);
+
+  // Sync back to parent profile state
+  useEffect(() => {
+    setProfile(prev => ({ ...prev, username }));
+  }, [username, setProfile]);
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setUsername(suggestion);
+  };
+
+  const isFormValid = profile.name && username.length >= 3 && isAvailable !== false;
+
   return (
     <div className="max-w-5xl w-full flex flex-col lg:flex-row h-full pt-16 gap-12 lg:gap-24 items-center lg:items-start overflow-y-auto no-scrollbar pb-32">
       
@@ -410,12 +454,41 @@ function Step6Profile({ profile, setProfile, onNext }: any) {
           
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pl-1">Username</label>
-            <Input 
-              value={profile.username} 
-              onChange={e => setProfile({...profile, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, '')})}
-              placeholder="@janedoe" 
-              className="h-14 bg-secondary/30 text-lg rounded-xl"
-            />
+            <div className="relative">
+              <Input 
+                value={username} 
+                onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                placeholder="@janedoe" 
+                className={`h-14 bg-secondary/30 text-lg rounded-xl pr-12 ${isAvailable === false && !isValidating ? 'border-red-500/50 focus-visible:ring-red-500/50' : ''}`}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                {isValidating ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : username.length >= 3 ? (
+                  isAvailable ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )
+                ) : null}
+              </div>
+            </div>
+            {isAvailable === false && !isValidating && suggestions.length > 0 && (
+              <div className="text-sm mt-2 ml-1">
+                <p className="text-red-500 mb-1">Username is taken. Try:</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleSuggestionClick(s)}
+                      className="px-3 py-1.5 bg-secondary rounded-lg text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -446,7 +519,7 @@ function Step6Profile({ profile, setProfile, onNext }: any) {
           <Button 
             size="lg" 
             className="w-full h-14 text-lg rounded-xl shadow-xl" 
-            disabled={!profile.name || !profile.username} 
+            disabled={!isFormValid} 
             onClick={onNext}
           >
             Continue

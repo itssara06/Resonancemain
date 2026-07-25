@@ -6,17 +6,36 @@ import { ChevronLeft, Image as ImageIcon, Type, Bold, Italic, Quote, List, Code,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useCreateArticle } from "@/hooks/useArticles";
 
 export default function WriteArticlePage() {
   const router = useRouter();
   const [isSaved, setIsSaved] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const { mutate: createArticle, isPending } = useCreateArticle();
   
   // Simulated auto-save
-  const handleContentChange = () => {
+  const handleContentChange = (val: string) => {
+    setContent(val);
     setIsSaved(false);
     setTimeout(() => setIsSaved(true), 1500);
+  };
+
+  const handlePublish = () => {
+    if (!title || !content) {
+      alert("Title and content are required");
+      return;
+    }
+    createArticle({ title, content, published: true }, {
+      onSuccess: () => {
+        router.push("/profile");
+      },
+      onError: (err: any) => {
+        alert(err.message || "Failed to publish article");
+      }
+    });
   };
 
   return (
@@ -42,7 +61,9 @@ export default function WriteArticlePage() {
             <Settings size={18} className="mr-1.5" />
             Settings
           </Button>
-          <Button className="rounded-full px-6 shadow-lg shadow-primary/20">Publish</Button>
+          <Button disabled={isPending} onClick={handlePublish} className="rounded-full px-6 shadow-lg shadow-primary/20">
+            {isPending ? "Publishing..." : "Publish"}
+          </Button>
         </div>
       </div>
 
@@ -70,7 +91,7 @@ export default function WriteArticlePage() {
               type="text" 
               placeholder="Article Title" 
               value={title}
-              onChange={(e) => { setTitle(e.target.value); handleContentChange(); }}
+              onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-transparent border-none text-4xl sm:text-5xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-0 mb-8 leading-tight resize-none"
             />
 
@@ -82,7 +103,8 @@ export default function WriteArticlePage() {
               </div>
               <Textarea 
                 placeholder="Tell your story..." 
-                onChange={handleContentChange}
+                onChange={(e) => handleContentChange(e.target.value)}
+                value={content}
                 className="w-full min-h-[400px] bg-transparent border-none text-lg text-foreground/90 placeholder:text-muted-foreground/50 focus-visible:ring-0 p-0 resize-none leading-relaxed font-serif"
               />
             </div>

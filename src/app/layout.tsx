@@ -18,6 +18,10 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/providers/QueryProvider";
+import { AuthInit } from "@/components/guards/AuthInit";
+
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -30,14 +34,19 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-background text-foreground overflow-x-hidden selection:bg-primary/20 selection:text-primary">
+      <body suppressHydrationWarning className="min-h-full flex flex-col font-sans bg-background text-foreground overflow-x-hidden selection:bg-primary/20 selection:text-primary">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           forcedTheme="dark"
           disableTransitionOnChange
         >
-          {children}
+          <QueryProvider>
+            <AuthInit>
+              {children}
+            </AuthInit>
+          </QueryProvider>
+          <Toaster theme="dark" position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

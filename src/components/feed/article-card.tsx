@@ -21,6 +21,7 @@ export interface ArticleProps {
     username: string;
     avatarUrl?: string;
   };
+  isDraft?: boolean;
 }
 
 export function ArticleCard({ article }: { article: ArticleProps }) {
@@ -56,6 +57,11 @@ export function ArticleCard({ article }: { article: ArticleProps }) {
           <span className="text-sm font-medium hover:underline">{article.author.name}</span>
           <span className="text-xs text-muted-foreground">•</span>
           <span className="text-xs text-muted-foreground">{article.publishedDate}</span>
+          {article.isDraft && (
+            <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">
+              Draft
+            </span>
+          )}
         </div>
 
         <h3 className="text-xl sm:text-2xl font-bold tracking-tight mb-2 group-hover:text-primary transition-colors leading-tight">

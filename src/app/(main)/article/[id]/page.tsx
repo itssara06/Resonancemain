@@ -7,6 +7,9 @@ import { ChevronLeft, Share2, Bookmark, Heart, MoreHorizontal, Clock, Eye } from
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DiscussionSection } from "@/components/discussion/discussion-section";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useArticle } from "@/hooks/useArticles";
+import { formatDistanceToNow } from "date-fns";
 
 const MOCK_ARTICLE = {
   id: "a1",
@@ -29,6 +32,14 @@ const MOCK_ARTICLE = {
 export default function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const unwrappedParams = use(params);
+  const articleId = unwrappedParams.id;
+  const { isAuthenticated } = useAuthStore();
+  const { data: response, isLoading } = useArticle(articleId);
+  const article = response?.data;
+  const requireAuth = (callback: () => void) => {
+    if (isAuthenticated) callback();
+    else router.push('/login');
+  };
   
   const [readingProgress, setReadingProgress] = useState(0);
   const [activeToc, setActiveToc] = useState("introduction");
@@ -45,6 +56,20 @@ export default function ArticlePage({ params }: { params: Promise<{ id: string }
     window.addEventListener("scroll", updateScroll);
     return () => window.removeEventListener("scroll", updateScroll);
   }, []);
+
+  if (isLoading) {
+    return <div className="min-h-screen py-20 text-center text-muted-foreground">Loading article...</div>;
+  }
+
+  if (!article) {
+    return (
+      <div className="min-h-screen py-20 text-center flex flex-col items-center">
+        <h2 className="text-2xl font-bold mb-2">Article not found</h2>
+        <p className="text-muted-foreground mb-6">This article doesn't exist or has been removed.</p>
+        <Button onClick={() => router.push('/')} variant="outline" className="rounded-full">Back to Home</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative min-h-screen bg-background text-foreground">
@@ -64,8 +89,8 @@ export default function ArticlePage({ params }: { params: Promise<{ id: string }
           </Button>
           
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-muted-foreground"><Heart size={18} /></Button>
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-muted-foreground"><Bookmark size={18} /></Button>
+            <Button onClick={() => requireAuth(() => {})} variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-muted-foreground"><Heart size={18} /></Button>
+            <Button onClick={() => requireAuth(() => {})} variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-muted-foreground"><Bookmark size={18} /></Button>
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary text-muted-foreground"><Share2 size={18} /></Button>
           </div>
         </div>
@@ -74,34 +99,36 @@ export default function ArticlePage({ params }: { params: Promise<{ id: string }
       {/* Hero Section */}
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 mt-8 mb-12">
         <div className="max-w-[720px] mx-auto mb-10">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">{MOCK_ARTICLE.title}</h1>
-          <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed mb-8">{MOCK_ARTICLE.subtitle}</p>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">{article.title}</h1>
+          {article.subtitle && <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed mb-8">{article.subtitle}</p>}
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-6 border-y border-border/50">
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage src={MOCK_ARTICLE.author.avatarUrl} />
-                <AvatarFallback>{MOCK_ARTICLE.author.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={article.author?.avatarUrl} />
+                <AvatarFallback>{article.author?.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-semibold text-foreground text-lg">{MOCK_ARTICLE.author.name}</span>
+                <span className="font-semibold text-foreground text-lg">{article.author?.name || article.author?.username}</span>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{MOCK_ARTICLE.publishedDate}</span>
+                  <span>{new Date(article.createdAt).toLocaleDateString()}</span>
                   <span>•</span>
-                  <span className="flex items-center gap-1"><Clock size={14} /> {MOCK_ARTICLE.readingTime}</span>
+                  <span className="flex items-center gap-1"><Clock size={14} /> {article.readingTime || '5 min read'}</span>
                   <span>•</span>
-                  <span className="flex items-center gap-1"><Eye size={14} /> {MOCK_ARTICLE.views}</span>
+                  <span className="flex items-center gap-1"><Eye size={14} /> {article.views || 0}</span>
                 </div>
               </div>
             </div>
-            <Button className="rounded-full px-6 shadow-lg shadow-primary/20">Follow</Button>
+            <Button onClick={() => requireAuth(() => {})} className="rounded-full px-6 shadow-lg shadow-primary/20">Follow</Button>
           </div>
         </div>
 
         {/* Huge Bleed Image */}
-        <div className="relative w-full aspect-[21/9] rounded-2xl sm:rounded-[32px] overflow-hidden bg-secondary mb-16 shadow-2xl">
-          <Image src={MOCK_ARTICLE.coverImage} alt="Cover" fill className="object-cover" priority />
-        </div>
+        {article.coverImage && (
+          <div className="relative w-full aspect-[21/9] rounded-2xl sm:rounded-[32px] overflow-hidden bg-secondary mb-16 shadow-2xl">
+            <Image src={article.coverImage} alt="Cover" fill className="object-cover" priority />
+          </div>
+        )}
       </div>
 
       {/* Content Layout Grid (TOC + Article) */}
@@ -120,51 +147,11 @@ export default function ArticlePage({ params }: { params: Promise<{ id: string }
         </aside>
 
         {/* Editorial Content (720px width) */}
-        <article className="w-full max-w-[720px] mx-auto prose prose-neutral dark:prose-invert prose-lg prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary">
-          <p>
-            When we first started scaling our design team, we thought the holy grail was a massive, highly configurable React component library. If every designer had a 1-to-1 match in Figma for what the developers were using in code, everything would be perfect, right?
-          </p>
-          <p>
-            Wrong. Fast forward six months, and we had an adoption rate of barely 40%. The issue wasn't that the components were broken; the issue was that they were too rigid for the reality of product design.
-          </p>
-          
-          <h2>The Problem with Components</h2>
-          <p>
-            Components inherently couple layout, logic, and styling. When a product designer needed a card that looked like our standard card but had slightly different padding to accommodate a new data visualization, they couldn't use the standard component. They detached the instance in Figma, and the developers wrote custom CSS to match it.
-          </p>
-          
-          <blockquote className="border-l-4 border-primary pl-6 italic text-xl my-10 text-muted-foreground">
-            "We were optimizing for consistency at the expense of flexibility, and in a fast-moving startup, flexibility always wins."
-          </blockquote>
-
-          <h2>Enter Semantic Tokens</h2>
-          <p>
-            The breakthrough came when we stopped trying to force everyone to use the same LEGO blocks, and instead just gave everyone the same colors of plastic. We shifted our focus entirely to <strong>Semantic Design Tokens</strong>.
-          </p>
-          
-          <pre className="bg-secondary/50 p-6 rounded-2xl overflow-x-auto text-sm border border-black/5 dark:border-white/5 my-8">
-            <code>
-{`// Bad: Hardcoded or generic tokens
---color-blue-500: #3b82f6;
-
-// Good: Semantic tokens
---color-surface-danger: #fee2e2;
---color-text-danger: #ef4444;
---border-radius-card: 16px;`}
-            </code>
-          </pre>
-          
-          <p>
-            By defining tokens semantically (e.g., <code>surface-elevated</code>, <code>text-muted</code>, <code>space-section</code>), designers could build custom layouts that still felt 100% on-brand and mathematically aligned with our system, without being locked into a specific React component's prop API.
-          </p>
-
-          <h2>Conclusion</h2>
-          <p>
-            Design systems are about creating a shared language. Sometimes, words (tokens) are much more expressive and scalable than pre-written sentences (components). 
-          </p>
+        <article className="w-full max-w-[720px] mx-auto prose prose-neutral dark:prose-invert prose-lg prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary whitespace-pre-wrap">
+          {article.content}
 
           <div className="flex flex-wrap gap-2 mt-12 mb-8">
-            {MOCK_ARTICLE.tags.map(tag => (
+            {article.tags?.map((tag: string) => (
               <span key={tag} className="text-sm font-medium bg-secondary/50 px-3 py-1.5 rounded-lg border border-black/5 dark:border-white/5">#{tag}</span>
             ))}
           </div>
@@ -175,7 +162,7 @@ export default function ArticlePage({ params }: { params: Promise<{ id: string }
 
       {/* Discussion Section at the bottom */}
       <div className="bg-secondary/10 border-t border-border/50">
-        <DiscussionSection initialComments={[]} totalCount={0} />
+        <DiscussionSection entityId={articleId} entityType="ARTICLE" />
       </div>
 
     </div>

@@ -6,78 +6,43 @@ import { Button } from "@/components/ui/button";
 import { NotificationCard, NotificationProps } from "@/components/notifications/notification-card";
 import { NotificationSettings } from "@/components/notifications/settings-modal";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNotifications, useMarkNotificationRead } from "@/hooks/useInteractions";
+import { formatDistanceToNow } from "date-fns";
 
 const FILTERS = ["All", "Unread", "Mentions", "Discussions", "Reactions", "Followers", "Articles"];
 
-const MOCK_NOTIFICATIONS: NotificationProps[] = [
-  {
-    id: "n1",
-    type: "reply",
-    isUnread: true,
-    time: "2 mins ago",
-    actors: [{ name: "Sarah Jenkins", username: "sarahj", discipline: "UX Research", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80" }],
-    contentPreview: "The hierarchy issue might actually come from the lack of negative space around the primary CTA.",
-    targetTitle: "Why are SaaS dashboards still identical?"
-  },
-  {
-    id: "n2",
-    type: "grouped_reaction",
-    isUnread: true,
-    time: "15 mins ago",
-    actors: [
-      { name: "Marcus Chen", username: "marcus", discipline: "Architecture" },
-      { name: "Elena Rostova", username: "elena" },
-      { name: "David Kim", username: "david" },
-      { name: "Jane Doe", username: "jane" },
-      { name: "John Smith", username: "john" }
-    ],
-    contentPreview: "Design Systems are becoming too rigid.",
-  },
-  {
-    id: "n3",
-    type: "mention",
-    isUnread: true,
-    time: "1 hour ago",
-    actors: [{ name: "Pablo Stanley", username: "pablo", avatarUrl: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80" }],
-    contentPreview: "@alex I think you'd enjoy this perspective on semantic tokens.",
-  },
-  {
-    id: "n4",
-    type: "helpful",
-    isUnread: false,
-    time: "3 hours ago",
-    actors: [{ name: "Julie Zhuo", username: "julie" }],
-    contentPreview: "I completely agree about progressive disclosure...",
-  },
-  {
-    id: "n5",
-    type: "follow",
-    isUnread: false,
-    time: "5 hours ago",
-    actors: [{ name: "BIG Architects", username: "big_arch", avatarUrl: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&q=80" }],
-  },
-  {
-    id: "n6",
-    type: "article_comment",
-    isUnread: false,
-    time: "1 day ago",
-    actors: [{ name: "John Doe", username: "johndoe", discipline: "Frontend Engineer" }],
-    contentPreview: "I loved your explanation of information hierarchy. It completely changed how I approach CSS Grid.",
-    targetTitle: "Design Systems Don't Scale Because of Components"
-  }
-];
-
 export default function NotificationsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
-  const [notifications, setNotifications] = useState<NotificationProps[]>(MOCK_NOTIFICATIONS);
+  
+  const { data: notificationsData, isLoading } = useNotifications(1, 50);
+  const { mutate: markReadMutation } = useMarkNotificationRead();
 
   const handleRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isUnread: false } : n));
+    markReadMutation(id);
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
+    markReadMutation(undefined);
   };
+
+  const rawNotifications = notificationsData?.data || [];
+  
+  const notifications: NotificationProps[] = rawNotifications.map(n => ({
+    id: n.id,
+    type: n.type === 'LIKE' ? 'reaction' :
+          n.type === 'COMMENT' ? 'reply' :
+          n.type === 'FOLLOW' ? 'follow' :
+          n.type === 'MENTION' ? 'mention' : 'reaction',
+    isUnread: !n.isRead,
+    time: formatDistanceToNow(new Date(n.createdAt), { addSuffix: true }),
+    actors: [{
+      name: n.actor?.name || n.actor?.username || 'Unknown',
+      username: n.actor?.username || 'unknown',
+      avatarUrl: n.actor?.avatarUrl || '',
+      discipline: n.actor?.discipline || 'Member',
+    }],
+    contentPreview: undefined, // Backend doesn't provide this directly yet, or we fetch entity
+  }));
 
   // Basic filter logic (mock)
   const filteredNotifications = notifications.filter(n => {
@@ -128,8 +93,11 @@ export default function NotificationsPage() {
 
       {/* Notification List */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6">
-        <AnimatePresence mode="popLayout">
-          {filteredNotifications.length > 0 ? (
+        {isLoading ? (
+          <div className="py-24 text-center text-muted-foreground">Loading notifications...</div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => (
               <motion.div
                 key={notification.id}
@@ -157,8 +125,9 @@ export default function NotificationsPage() {
                 When people engage with your ideas, reply to your discussions, or read your articles, they'll appear here.
               </p>
             </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

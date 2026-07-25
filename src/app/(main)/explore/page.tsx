@@ -7,19 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard, PostProps } from "@/components/feed/post-card";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePosts } from "@/hooks/usePosts";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useFollow } from "@/hooks/useUsers";
+import { useSearchUsers, useSearchPosts, useSearchArticles } from "@/hooks/useSearch";
+import { useRouter } from "next/navigation";
 
 // --- MOCK DATA ---
 const TRENDING_TAGS = [
   "UX", "Architecture", "ProductDesign", "IndustrialDesign", 
   "GraphicDesign", "Typography", "BrandIdentity", "Accessibility", 
   "MotionDesign", "InteractionDesign", "CreativeCoding", "AI", "DesignSystems"
-];
-
-const DISCUSSIONS = [
-  { id: 1, title: "Why are most SaaS dashboards still visually identical?", comments: 328, hot: true },
-  { id: 2, title: "Parametric architecture is becoming repetitive.", comments: 421, hot: false },
-  { id: 3, title: "Is minimalism making every product look the same?", comments: 291, hot: true },
-  { id: 4, title: "Accessibility shouldn't be an afterthought.", comments: 183, hot: false }
 ];
 
 const DESIGNERS = [
@@ -39,33 +37,40 @@ const DISCIPLINES = [
   { name: "Motion Design", color: "from-cyan-500/20 to-cyan-500/5", border: "border-cyan-500/20" }
 ];
 
-const SUGGESTED_POSTS: PostProps[] = [
-  {
-    id: "101",
-    user: { name: "Elena Rostova", username: "elena_r", discipline: "Motion Design" },
-    content: "Experimenting with spring animations in Framer Motion. The difference between stiffness 100 vs 300 completely changes the personality of the UI component.",
-    type: "Work in Progress",
-    tags: ["Motion", "React", "FramerMotion"],
-    createdAt: "1h ago",
-    likes: 312,
-    comments: 45
-  },
-  {
-    id: "102",
-    user: { name: "David Kim", username: "dkim_arch", discipline: "Architecture" },
-    content: "A study on light and shadow for the new library proposal. We are trying to maximize natural light during the winter months without causing glare.",
-    images: ["https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=2000"],
-    type: "Process Journal",
-    tags: ["Architecture", "Lighting", "PublicSpace"],
-    createdAt: "3h ago",
-    likes: 890,
-    comments: 112
-  }
-];
-
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const isSearching = searchQuery.length > 0;
+  const isSearching = searchQuery.length > 2;
+  
+  const { data: postsData, isLoading: loading } = usePosts(1, 10);
+  const rawPosts = postsData?.data;
+  const posts = Array.isArray(rawPosts) ? rawPosts : (Array.isArray(postsData) ? postsData : []);
+
+  // Derived trending discussions from posts
+  const trendingDiscussions = posts.slice(0, 4).map(t => ({
+    id: t.id,
+    title: t.content.length > 65 ? t.content.substring(0, 65) + '...' : t.content,
+    comments: t.commentsCount || 0,
+    hot: (t.commentsCount || 0) > 2
+  }));
+
+  const mappedPosts: PostProps[] = posts.map(post => ({
+    id: post.id,
+    user: {
+      name: post.author?.displayName || post.user?.displayName || post.author?.username || post.user?.username || 'Unknown',
+      username: post.author?.username || post.user?.username || 'unknown',
+      avatarUrl: post.author?.avatar || post.user?.avatar || post.user?.avatarUrl || '',
+      discipline: post.author?.disciplines?.[0] || post.user?.disciplines?.[0] || post.user?.discipline || 'Designer',
+    },
+    content: post.content,
+    images: post.images || [],
+    type: post.type || 'Idea',
+    tags: post.tags || [],
+    createdAt: new Date(post.createdAt).toLocaleDateString(),
+    likes: post.likesCount || 0,
+    comments: post.commentsCount || 0,
+    isLiked: post.isLiked || false,
+    isSaved: post.isSaved || false,
+  }));
 
   return (
     <div className="flex flex-col w-full min-h-screen relative">
@@ -125,7 +130,7 @@ export default function ExplorePage() {
                   <h2 className="text-xl font-bold tracking-tight">Trending Discussions</h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {DISCUSSIONS.map(discussion => (
+                  {trendingDiscussions.length > 0 ? trendingDiscussions.map(discussion => (
                     <motion.div 
                       key={discussion.id}
                       whileHover={{ scale: 1.02 }}
@@ -141,7 +146,9 @@ export default function ExplorePage() {
                         {discussion.hot && <span className="ml-2 text-xs bg-rose-500/20 text-rose-500 px-2 py-0.5 rounded-full">Hot</span>}
                       </div>
                     </motion.div>
-                  ))}
+                  )) : (
+                    <div className="col-span-2 text-center py-8 text-muted-foreground">No discussions trending right now.</div>
+                  )}
                 </div>
               </section>
 
@@ -190,9 +197,15 @@ export default function ExplorePage() {
               <section>
                 <h2 className="text-xl font-bold tracking-tight mb-6">Suggested For You</h2>
                 <div className="flex flex-col gap-6">
-                  {SUGGESTED_POSTS.map(post => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
+                  {loading ? (
+                    <div className="py-4 text-center text-muted-foreground">Loading...</div>
+                  ) : mappedPosts.length === 0 ? (
+                    <div className="py-4 text-center text-muted-foreground">No posts found.</div>
+                  ) : (
+                    mappedPosts.map(post => (
+                      <PostCard key={post.id} post={post} />
+                    ))
+                  )}
                 </div>
               </section>
             </motion.div>
@@ -207,6 +220,20 @@ export default function ExplorePage() {
 
 function DesignerCard({ designer }: { designer: any }) {
   const [isFollowing, setIsFollowing] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const followMutation = useFollow();
+  const router = useRouter();
+
+  const handleFollow = () => {
+    if (isAuthenticated) {
+      setIsFollowing(!isFollowing);
+      followMutation.mutate(designer.id, {
+        onError: () => setIsFollowing(isFollowing)
+      });
+    } else {
+      router.push('/login');
+    }
+  };
 
   return (
     <div className="surface min-w-[240px] p-6 rounded-2xl flex flex-col items-center text-center shrink-0">
@@ -223,7 +250,7 @@ function DesignerCard({ designer }: { designer: any }) {
       <Button 
         variant={isFollowing ? "outline" : "default"}
         className={`w-full rounded-xl transition-all duration-300 ${isFollowing ? 'bg-transparent text-foreground border-border' : ''}`}
-        onClick={() => setIsFollowing(!isFollowing)}
+        onClick={handleFollow}
       >
         {isFollowing ? 'Following ✓' : 'Follow'}
       </Button>
@@ -232,6 +259,12 @@ function DesignerCard({ designer }: { designer: any }) {
 }
 
 function SearchResults({ query }: { query: string }) {
+  const { data: usersData, isLoading: loadingUsers } = useSearchUsers(query);
+  const { data: postsData, isLoading: loadingPosts } = useSearchPosts(query);
+
+  const users = usersData?.data || [];
+  const posts = postsData?.data || [];
+
   return (
     <div className="w-full">
       <Tabs defaultValue="all" className="w-full">
@@ -247,13 +280,61 @@ function SearchResults({ query }: { query: string }) {
           ))}
         </TabsList>
         
-        <TabsContent value="all" className="mt-0">
-          <div className="py-20 text-center surface rounded-2xl">
-            <h3 className="text-lg font-medium mb-2">Searching for "{query}"</h3>
-            <p className="text-muted-foreground">Showing simulated live results across all categories.</p>
-          </div>
+        <TabsContent value="all" className="mt-0 space-y-8">
+          {(loadingUsers || loadingPosts) && <div className="py-20 text-center">Searching...</div>}
+          
+          {!loadingUsers && !loadingPosts && users.length === 0 && posts.length === 0 && (
+            <div className="py-20 text-center surface rounded-2xl">
+              <h3 className="text-lg font-medium mb-2">No results for "{query}"</h3>
+            </div>
+          )}
+
+          {users.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold tracking-tight">People</h3>
+              <div className="flex overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0 gap-4 no-scrollbar">
+                {users.map((user: any) => (
+                  <DesignerCard key={user.id} designer={{
+                    id: user.id,
+                    name: user.name || user.username,
+                    username: user.username,
+                    avatar: user.name?.charAt(0) || 'U',
+                    discipline: user.discipline || 'Member',
+                    followers: "0" // API needs to return follower count
+                  }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {posts.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold tracking-tight">Posts</h3>
+              <div className="flex flex-col gap-6">
+                {posts.map((post: any) => (
+                  <PostCard key={post.id} post={{
+                    id: post.id,
+                    user: {
+                      name: post.author?.displayName || post.user?.displayName || post.author?.username || post.user?.username || 'Unknown',
+                      username: post.author?.username || post.user?.username || 'unknown',
+                      avatarUrl: post.author?.avatar || post.user?.avatar || post.user?.avatarUrl || '',
+                      discipline: post.author?.disciplines?.[0] || post.user?.disciplines?.[0] || post.user?.discipline || 'Member',
+                    },
+                    content: post.content,
+                    images: post.images || [],
+                    type: post.type || 'Idea',
+                    tags: post.tags || [],
+                    createdAt: new Date(post.createdAt).toLocaleDateString(),
+                    likes: post.likesCount || 0,
+                    comments: post.commentsCount || 0,
+                    isLiked: post.isLiked || false,
+                    isSaved: post.isSaved || false,
+                  }} />
+                ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
-        {/* Other tabs omitted for brevity, they would filter the same mock results */}
       </Tabs>
     </div>
   );
