@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error(error.message);
     }
 
-    set({ loading: false });
+    await get().fetchCurrentUser();
   },
 
   logout: async () => {

@@ -47,10 +47,7 @@ function LoginForm() {
         router.push(nextPath);
       } else {
         await register({ email, password, username, displayName });
-        setIsLogin(true);
-        // Clear the password field so they can type it to sign in
-        setPassword("");
-        alert("Account created successfully! Please sign in.");
+        router.push(nextPath);
       }
     } catch (err: any) {
       setLocalError(err.message || "An error occurred");
