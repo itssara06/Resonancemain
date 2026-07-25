@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  hasPassword: boolean;
   loading: boolean;
   error: string | null;
   
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
+  hasPassword: true, // Default true to prevent early redirects
   loading: true, // Initially true while we check session
   error: null,
 
@@ -83,7 +85,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           avatar: data.user.image,
       } as unknown as User;
 
-      set({ user: userToStore, isAuthenticated: true, loading: false });
+      // Fetch hasPassword status
+      let hasPassword = true;
+      try {
+        const passwordRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/user/has-password`, {
+          credentials: 'include'
+        });
+        if (passwordRes.ok) {
+          const json = await passwordRes.json();
+          hasPassword = json.data.hasPassword;
+        }
+      } catch(e) {
+        console.error("Failed to check password status", e);
+      }
+      
+      set({ user: userToStore, isAuthenticated: true, hasPassword, loading: false });
     } catch (error) {
       get().clear();
     }
