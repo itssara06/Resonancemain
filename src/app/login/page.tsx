@@ -13,8 +13,9 @@ function LoginForm() {
   const nextPath = searchParams.get('next') || '/';
   
   const [isLogin, setIsLogin] = useState(true);
-  const [dob, setDob] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   
   const { login, register, loading, error } = useAuthStore();
@@ -28,7 +29,7 @@ function LoginForm() {
         await login({ email, password });
         router.push(nextPath);
       } else {
-        await register({ email, password, dob });
+        await register({ email, password, username, displayName });
         setIsLogin(true);
         // Clear the password field so they can type it to sign in
         setPassword("");
@@ -63,22 +64,13 @@ function LoginForm() {
                 <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Email</label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="bg-black/20 border-white/10 h-12 rounded-xl" required />
               </div>
-              <div className="space-y-1.5 flex flex-col">
-                <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Date of Birth</label>
-                <Input 
-                  type="text"
-                  placeholder="DD/MM/YYYY"
-                  value={dob}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, "");
-                    if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
-                    if (val.length > 5) val = val.slice(0, 5) + "/" + val.slice(5, 9);
-                    setDob(val);
-                  }}
-                  maxLength={10}
-                  className="bg-black/20 border-white/10 h-12 rounded-xl text-white placeholder-muted-foreground"
-                  required
-                />
+              <div className="space-y-1.5">
+                <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Username</label>
+                <Input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="johndoe" className="bg-black/20 border-white/10 h-12 rounded-xl text-white placeholder-muted-foreground" required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Display Name</label>
+                <Input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="John Doe" className="bg-black/20 border-white/10 h-12 rounded-xl text-white placeholder-muted-foreground" required />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Password</label>

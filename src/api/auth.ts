@@ -4,7 +4,8 @@ import { User } from '@/types';
 export interface AuthCredentials {
   email: string;
   password?: string;
-  dob?: string;
+  username?: string;
+  displayName?: string;
 }
 
 export interface AuthResponse {

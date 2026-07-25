@@ -17,6 +17,8 @@ import { createClient } from "@/lib/supabase/client";
 export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
       } else {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { error: signUpError } = await supabase.auth.signUp({ email, password, options: { data: { username, full_name: displayName } } });
         if (signUpError) throw signUpError;
       }
       
@@ -84,22 +86,13 @@ export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Email</label>
                     <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="bg-black/5 dark:bg-black/20 border-border h-12 rounded-xl" required />
                   </div>
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Date of Birth</label>
-                    <Input 
-                      type="text"
-                      placeholder="DD/MM/YYYY"
-                      value={dob}
-                      onChange={(e) => {
-                        let val = e.target.value.replace(/\D/g, "");
-                        if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
-                        if (val.length > 5) val = val.slice(0, 5) + "/" + val.slice(5, 9);
-                        setDob(val);
-                      }}
-                      maxLength={10}
-                      className="bg-black/5 dark:bg-black/20 border-border h-12 rounded-xl text-foreground placeholder-muted-foreground"
-                      required
-                    />
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Username</label>
+                    <Input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="johndoe" className="bg-black/5 dark:bg-black/20 border-border h-12 rounded-xl text-foreground placeholder-muted-foreground" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Display Name</label>
+                    <Input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="John Doe" className="bg-black/5 dark:bg-black/20 border-border h-12 rounded-xl text-foreground placeholder-muted-foreground" required />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground pl-1">Password</label>
