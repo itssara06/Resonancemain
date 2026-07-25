@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '@/types';
-import { login as loginApi, register as registerApi, logout as logoutApi, fetchCurrentUser, refreshToken as refreshApi, AuthCredentials } from '@/api/auth';
+import { AuthCredentials } from '@/api/auth';
+import { authClient, signIn, signUp, signOut } from '@/lib/auth-client';
 
 interface AuthState {
   user: User | null;
@@ -26,62 +27,71 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (credentials) => {
     set({ loading: true, error: null });
-    try {
-      const { user, accessToken } = await loginApi(credentials);
-      set({ user, accessToken, isAuthenticated: true, loading: false });
-    } catch (error: any) {
-      const backendError = error.response?.data?.errors?.[0]?.message || error.response?.data?.message;
-      set({ loading: false, error: backendError || error.message || 'Login failed' });
-      throw error;
+    
+    const { data, error } = await signIn.email({
+        email: credentials.email,
+        password: credentials.password
+    });
+
+    if (error) {
+        set({ loading: false, error: error.message || 'Login failed' });
+        throw new Error(error.message);
     }
+    
+    // Better Auth handles the token via cookies.
+    // For local state we just need to refetch the user.
+    await get().fetchCurrentUser();
   },
 
   register: async (credentials) => {
     set({ loading: true, error: null });
-    try {
-      await registerApi(credentials);
-      set({ loading: false }); // Do not log in
-    } catch (error: any) {
-      const backendError = error.response?.data?.errors?.[0]?.message || error.response?.data?.message;
-      set({ loading: false, error: backendError || error.message || 'Registration failed' });
-      throw error;
+    
+    const { data, error } = await signUp.email({
+        email: credentials.email,
+        password: credentials.password,
+        name: credentials.username || credentials.email.split('@')[0],
+    });
+
+    if (error) {
+        set({ loading: false, error: error.message || 'Registration failed' });
+        throw new Error(error.message);
     }
+
+    set({ loading: false });
   },
 
   logout: async () => {
     set({ loading: true, error: null });
-    try {
-      await logoutApi();
-    } catch (error) {
-      console.error('Logout API error:', error);
-    } finally {
-      get().clear();
-    }
+    await signOut();
+    get().clear();
   },
 
   fetchCurrentUser: async () => {
     set({ loading: true, error: null });
     try {
-      // First ensure we have a valid token
-      if (!get().accessToken) {
-        await get().refreshToken();
-      }
+      const { data, error } = await authClient.getSession();
       
-      const user = await fetchCurrentUser();
-      set({ user, isAuthenticated: true, loading: false });
+      if (error || !data) {
+          get().clear();
+          return;
+      }
+
+      // Map Better Auth user to our internal User format
+      const userToStore = {
+          ...data.user,
+          displayName: data.user.name,
+          avatar: data.user.image,
+      } as unknown as User;
+
+      set({ user: userToStore, isAuthenticated: true, loading: false });
     } catch (error) {
-      // If fetching user fails, clear state
       get().clear();
     }
   },
 
   refreshToken: async () => {
-    try {
-      const { accessToken } = await refreshApi();
-      set({ accessToken });
-    } catch (error) {
-      throw error;
-    }
+    // Better Auth handles token refreshes automatically in the background via cookies!
+    // We just keep this here to satisfy the old interface if something calls it.
   },
 
   clear: () => {
