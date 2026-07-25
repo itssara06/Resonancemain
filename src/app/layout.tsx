@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "A social platform where designers share ideas, work-in-progress, and design thinking.",
 };
 
-import { ThemeProvider } from "@/components/theme-provider";
+
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthInit } from "@/components/guards/AuthInit";
 
@@ -32,22 +32,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col font-sans bg-background text-foreground overflow-x-hidden selection:bg-primary/20 selection:text-primary">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          forcedTheme="dark"
-          disableTransitionOnChange
-        >
           <QueryProvider>
             <AuthInit>
               {children}
             </AuthInit>
           </QueryProvider>
           <Toaster theme="dark" position="bottom-right" />
-        </ThemeProvider>
       </body>
     </html>
   );

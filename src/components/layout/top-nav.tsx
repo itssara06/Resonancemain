@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Home, Compass, Bell, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -52,7 +51,6 @@ export function TopNav() {
         )}
         
         <div className="w-px h-8 bg-border mx-2" />
-        <ThemeToggle />
         
         {isAuthenticated ? (
           <DropdownMenu>
