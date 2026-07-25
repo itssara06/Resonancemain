@@ -1,6 +1,6 @@
 # Resonance API Documentation
 
-**Base URL**: `https://app.resonance.org.in/api`
+**Base URL**: `http://localhost:5000/api` (Local Backend)
 
 ## Authentication Protocol
 - **Access Tokens**: Returned in the JSON response payload on login/register. Must be sent in the `Authorization: Bearer <token>` header for protected routes.
